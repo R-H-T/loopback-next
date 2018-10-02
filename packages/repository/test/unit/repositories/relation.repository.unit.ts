@@ -3,7 +3,6 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
-import {Getter} from '@loopback/context';
 import {expect, sinon} from '@loopback/testlab';
 import {
   AnyObject,
@@ -14,6 +13,7 @@ import {
   Entity,
   EntityCrudRepository,
   Filter,
+  Getter,
   HasManyRepository,
   juggler,
   Options,

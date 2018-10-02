@@ -3,27 +3,28 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
+import {MetadataInspector} from '@loopback/context';
 import {expect} from '@loopback/testlab';
+import {Model, RelationDefinitionMap, Class} from '../../..';
 import {
+  belongsTo,
+  embedsMany,
+  embedsOne,
+  Entity,
+  hasMany,
+  hasOne,
   model,
-  property,
   MODEL_KEY,
   MODEL_PROPERTIES_KEY,
-  relation,
-  hasOne,
-  belongsTo,
-  embedsOne,
-  embedsMany,
-  hasMany,
+  property,
   referencesMany,
   referencesOne,
+  relation,
   RELATIONS_KEY,
   RelationType,
-  Entity,
   ValueObject,
 } from '../../../';
-import {MetadataInspector} from '@loopback/context';
-import {RelationDefinitionMap} from '../../../src';
+import {RelationMetadata} from '../../../src';
 
 describe('model decorator', () => {
   @model()
@@ -97,8 +98,10 @@ describe('model decorator', () => {
     @property()
     customerId: string;
 
-    @belongsTo({target: 'Customer'})
-    // TypeScript does not allow me to reference Customer here
+    @belongsTo(() => Customer)
+    // TypeScript does not allow us to reference Customer here, the compiled
+    // code throws at runtime when trying to set design:type metadata to Customer
+    // class that is not defined yet.
     customer: ICustomer;
 
     // Validates that property no longer requires a parameter
@@ -259,29 +262,32 @@ describe('model decorator', () => {
   });
 
   it('adds hasMany metadata', () => {
-    const meta: RelationDefinitionMap =
-      MetadataInspector.getAllPropertyMetadata(
+    const meta =
+      MetadataInspector.getAllPropertyMetadata<RelationMetadata>(
         RELATIONS_KEY,
         Customer.prototype,
       ) || /* istanbul ignore next */ {};
-    expect(meta.orders).to.eql({
+    expect(meta.orders).to.containEql({
       type: RelationType.hasMany,
       name: 'orders',
-      source: Customer,
-      target: () => Order,
     });
+    expect(meta.orders.source).to.be.exactly(Customer);
+    expect(meta.orders.target()).to.be.exactly(Order);
   });
 
   it('adds belongsTo metadata', () => {
     const meta =
-      MetadataInspector.getAllPropertyMetadata(
+      MetadataInspector.getAllPropertyMetadata<RelationMetadata>(
         RELATIONS_KEY,
         Order.prototype,
       ) || /* istanbul ignore next */ {};
-    expect(meta.customer).to.eql({
+    expect(meta.customer).to.containEql({
       type: RelationType.belongsTo,
-      target: 'Customer',
+      name: 'customer',
+      target: () => Customer,
     });
+    expect(meta.customer.source).to.be.exactly(Order);
+    expect(meta.customer.target()).to.be.exactly(Customer);
   });
 
   it('adds hasOne metadata', () => {
