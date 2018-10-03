@@ -5,12 +5,14 @@
 
 import {expect} from '@loopback/testlab';
 import {
+  BelongsToAccessor,
   BelongsToDefinition,
   createBelongsToAccessor,
   createHasManyRepositoryFactory,
   DefaultCrudRepository,
   Entity,
   EntityCrudRepository,
+  EntityNotFoundError,
   Getter,
   HasManyDefinition,
   HasManyRepository,
@@ -18,9 +20,7 @@ import {
   juggler,
   ModelDefinition,
   RelationType,
-  BelongsToAccessor,
 } from '../../..';
-import {EntityNotFoundError} from '../../../src';
 
 // Given a Customer and Order models - see definitions at the bottom
 let db: juggler.DataSource;
