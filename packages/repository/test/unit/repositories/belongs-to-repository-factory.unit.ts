@@ -5,49 +5,67 @@
 
 import {expect, sinon} from '@loopback/testlab';
 import {
-  createHasManyRepositoryFactory,
+  BelongsToDefinition,
+  createBelongsToAccessor,
   DefaultCrudRepository,
   Entity,
   Getter,
-  HasManyDefinition,
   juggler,
   ModelDefinition,
   RelationType,
 } from '../../..';
 
-describe('createHasManyRepositoryFactory', () => {
+describe('createBelongsToAccessor', () => {
   let customerRepo: CustomerRepository;
+  let companyRepo: CompanyRepository;
 
   beforeEach(givenStubbedCustomerRepo);
+  beforeEach(givenStubbedCompanyRepo);
 
   it('rejects relations with missing source', () => {
-    const relationMeta = givenHasManyDefinition({
+    const relationMeta = givenBelongsToDefinition({
       source: undefined,
     });
 
     expect(() =>
-      createHasManyRepositoryFactory(
+      createBelongsToAccessor(
         relationMeta,
-        Getter.fromValue(customerRepo),
+        Getter.fromValue(companyRepo),
+        customerRepo,
       ),
     ).to.throw(/source model must be defined/);
   });
 
   it('rejects relations with missing target', () => {
-    const relationMeta = givenHasManyDefinition({
+    const relationMeta = givenBelongsToDefinition({
       target: undefined,
     });
 
     expect(() =>
-      createHasManyRepositoryFactory(
+      createBelongsToAccessor(
         relationMeta,
-        Getter.fromValue(customerRepo),
+        Getter.fromValue(companyRepo),
+        customerRepo,
       ),
     ).to.throw(/target must be a type resolver/);
   });
 
+  it('rejects relations with missing keyFrom', () => {
+    const relationMeta = givenBelongsToDefinition({
+      keyFrom: undefined,
+    });
+
+    expect(() =>
+      createBelongsToAccessor(
+        relationMeta,
+        Getter.fromValue(companyRepo),
+        customerRepo,
+      ),
+    ).to.throw(/keyFrom is required/);
+  });
+
   it('rejects relations with a target that is not a type resolver', () => {
-    const relationMeta = givenHasManyDefinition({
+    const relationMeta = givenBelongsToDefinition({
       // tslint:disable-next-line:no-any
       target: Customer as any,
       // the cast to any above is necessary to disable compile check
@@ -55,33 +73,65 @@ describe('createHasManyRepositoryFactory', () => {
     });
 
     expect(() =>
-      createHasManyRepositoryFactory(
+      createBelongsToAccessor(
         relationMeta,
-        Getter.fromValue(customerRepo),
+        Getter.fromValue(companyRepo),
+        customerRepo,
       ),
     ).to.throw(/target must be a type resolver/);
   });
 
-  it('rejects relations with keyTo pointing to an unknown property', () => {
-    const relationMeta = givenHasManyDefinition({
-      target: () => Customer,
-      // Let the relation to use the default keyTo value "companyId"
-      // which does not exist on the Customer model!
+  it('throws an error when the target does not have any primary key', () => {
+    class Product extends Entity {
+      static definition = new ModelDefinition('Product').addProperty(
+        'categoryId',
+        {type: Number},
+      );
+    }
+
+    class Category extends Entity {
+      static definition = new ModelDefinition('Category');
+    }
+
+    const productRepo = sinon.createStubInstance(
+      DefaultCrudRepository,
+    ) as DefaultCrudRepository<Product, number>;
+    const categoryRepo = sinon.createStubInstance(
+      DefaultCrudRepository,
+    ) as DefaultCrudRepository<Category, number>;
+
+    const relationMeta: BelongsToDefinition = {
+      type: RelationType.belongsTo,
+      name: 'category',
+      source: Product,
+      target: () => Category,
+      keyFrom: 'categoryId',
+      // Let the relation to look up keyTo as the primary key of Category
+      // (which is not defined!)
       keyTo: undefined,
-    });
+    };
 
     expect(() =>
-      createHasManyRepositoryFactory(
+      createBelongsToAccessor(
         relationMeta,
-        Getter.fromValue(customerRepo),
+        Getter.fromValue(categoryRepo),
+        productRepo,
       ),
-    ).to.throw(/target model Customer is missing.*foreign key companyId/);
+    ).to.throw(/Category does not have any primary key/);
   });
 
   /*------------- HELPERS ---------------*/
 
   class Customer extends Entity {
     static definition = new ModelDefinition('Customer').addProperty('id', {
+      type: Number,
+      id: true,
+    });
+    id: number;
+  }
+
+  class Company extends Entity {
+    static definition = new ModelDefinition('Company').addProperty('id', {
       type: Number,
       id: true,
     });
@@ -97,26 +147,32 @@ describe('createHasManyRepositoryFactory', () => {
     }
   }
 
+  class CompanyRepository extends DefaultCrudRepository<
+    Company,
+    typeof Company.prototype.id
+  > {
+    constructor(dataSource: juggler.DataSource) {
+      super(Company, dataSource);
+    }
+  }
+
   function givenStubbedCustomerRepo() {
     customerRepo = sinon.createStubInstance(CustomerRepository);
   }
 
-  function givenHasManyDefinition(
-    props?: Partial<HasManyDefinition>,
-  ): HasManyDefinition {
-    class Company extends Entity {
-      static definition = new ModelDefinition('Company').addProperty('id', {
-        type: Number,
-        id: true,
-      });
-      id: number;
-    }
+  function givenStubbedCompanyRepo() {
+    customerRepo = sinon.createStubInstance(CompanyRepository);
+  }
 
-    const defaults: HasManyDefinition = {
-      type: RelationType.hasMany,
-      name: 'customers',
-      target: () => Customer,
+  function givenBelongsToDefinition(
+    props?: Partial<BelongsToDefinition>,
+  ): BelongsToDefinition {
+    const defaults: BelongsToDefinition = {
+      type: RelationType.belongsTo,
+      name: 'company',
       source: Company,
+      target: () => Customer,
+      keyFrom: 'customerId',
     };
 
     return Object.assign(defaults, props);

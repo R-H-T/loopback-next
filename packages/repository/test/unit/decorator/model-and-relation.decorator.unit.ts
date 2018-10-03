@@ -5,7 +5,7 @@
 
 import {MetadataInspector} from '@loopback/context';
 import {expect} from '@loopback/testlab';
-import {Model, RelationDefinitionMap, Class} from '../../..';
+import {RelationMetadata} from '../../..';
 import {
   belongsTo,
   embedsMany,
@@ -24,7 +24,6 @@ import {
   RelationType,
   ValueObject,
 } from '../../../';
-import {RelationMetadata} from '../../../src';
 
 describe('model decorator', () => {
   @model()
