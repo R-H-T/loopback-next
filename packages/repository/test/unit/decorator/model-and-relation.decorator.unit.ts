@@ -69,8 +69,6 @@ describe('model decorator', () => {
     description: string;
   }
 
-  interface ICustomer {}
-
   @model()
   class Product extends Entity {
     @property()
@@ -94,14 +92,9 @@ describe('model decorator', () => {
 
     @property({type: 'string', id: true, generated: true})
     id: string;
-    @property()
-    customerId: string;
 
     @belongsTo(() => Customer)
-    // TypeScript does not allow us to reference Customer here, the compiled
-    // code throws at runtime when trying to set design:type metadata to Customer
-    // class that is not defined yet.
-    customer: ICustomer;
+    customerId: string;
 
     // Validates that property no longer requires a parameter
     @property()
@@ -109,8 +102,10 @@ describe('model decorator', () => {
   }
 
   @model()
-  class Customer extends Entity implements ICustomer {
+  class Customer extends Entity {
+    @property({type: 'string', id: true, generated: true})
     id: string;
+
     email: string;
     firstName: string;
     lastName: string;
@@ -280,13 +275,15 @@ describe('model decorator', () => {
         RELATIONS_KEY,
         Order.prototype,
       ) || /* istanbul ignore next */ {};
-    expect(meta.customer).to.containEql({
+    const relationDef = meta.customerId;
+    expect(relationDef).to.containEql({
       type: RelationType.belongsTo,
       name: 'customer',
       target: () => Customer,
+      keyFrom: 'customerId',
     });
-    expect(meta.customer.source).to.be.exactly(Order);
-    expect(meta.customer.target()).to.be.exactly(Customer);
+    expect(relationDef.source).to.be.exactly(Order);
+    expect(relationDef.target()).to.be.exactly(Customer);
   });
 
   it('adds hasOne metadata', () => {
