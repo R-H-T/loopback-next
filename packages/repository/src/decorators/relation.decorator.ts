@@ -112,7 +112,9 @@ export function belongsTo<T extends Entity>(
         decoratedTarget,
         decoratedKey,
       ),
-      required: true,
+      // TODO(bajtos) Make the foreign key required once our REST API layer
+      // allows controller methods to exclude required properties
+      // required: false,
     };
     property(propMeta)(decoratedTarget, decoratedKey);
 

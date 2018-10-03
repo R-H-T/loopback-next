@@ -471,7 +471,6 @@ describe('build-schema', () => {
                 },
                 customerId: {type: 'number'},
               },
-              required: ['customerId'],
             },
           });
         });

@@ -137,7 +137,6 @@ describe('relation decorator', () => {
       expect(jugglerMeta).to.eql({
         addressBookId: {
           type: Number,
-          required: true,
         },
       });
     });
