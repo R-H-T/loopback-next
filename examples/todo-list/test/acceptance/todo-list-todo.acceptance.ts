@@ -8,6 +8,7 @@ import {
   createRestAppClient,
   expect,
   givenHttpServerConfig,
+  toJSON,
 } from '@loopback/testlab';
 import {TodoListApplication} from '../../src/application';
 import {Todo, TodoList} from '../../src/models/';
@@ -47,7 +48,11 @@ describe('TodoListApplication', () => {
       .send(todo)
       .expect(200);
 
-    expect(response.body).to.containDeep(todo);
+    const expected = {...todo, todoListId: persistedTodoList.id};
+    expect(response.body).to.containEql(expected);
+
+    const created = await todoRepo.findById(response.body.id);
+    expect(toJSON(created)).to.deepEqual({id: response.body.id, ...expected});
   });
 
   context('when dealing with multiple persisted Todos', () => {
